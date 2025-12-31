@@ -1,0 +1,115 @@
+name: "aws-ecs-adot-collector"
+# Canonical GitHub repo
+github_repo: "cloudposse-terraform-components/aws-ecs-adot-collector"
+# Short description of this project
+description: |-
+  This component deploys the AWS Distro for OpenTelemetry (ADOT) collector as an ECS service.
+  It collects metrics from ECS tasks and forwards them to Amazon Managed Prometheus for visualization in Grafana.
+
+usage: |-
+  **Stack Level**: Regional
+
+  This component is the ECS counterpart to the EKS Prometheus scraper/Promtail setup for Grafana monitoring.
+  It runs the ADOT collector as a Fargate task that:
+
+  - Scrapes Prometheus metrics from ECS services via service discovery
+  - Collects ECS container metrics
+  - Forwards all metrics to Amazon Managed Prometheus
+
+  ### Prerequisites
+
+  - An ECS cluster deployed via the `ecs` component
+  - Amazon Managed Prometheus workspace deployed via the `managed-prometheus/workspace` component
+  - VPC with private subnets
+
+  ### Example Configuration
+
+  ```yaml
+  components:
+    terraform:
+      ecs-adot-collector:
+        vars:
+          enabled: true
+          name: ecs-adot-collector
+          # ADOT collector image
+          adot_image: "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+          # Task resources
+          task_cpu: 256
+          task_memory: 512
+          desired_count: 1
+          # Logging
+          log_retention_days: 30
+          # Prometheus scraping configuration
+          scrape_interval: "30s"
+          # ECS service discovery - discover and scrape all ECS tasks
+          ecs_service_discovery_enabled: true
+          ecs_service_discovery_port: 9090
+          # Network configuration
+          assign_public_ip: false
+          # Dependencies - looked up from current stack
+          prometheus_workspace_endpoint: !terraform.state prometheus workspace_endpoint
+          ecs_cluster_name: !terraform.state ecs/cluster cluster_name
+          vpc_id: !terraform.state vpc vpc_id
+          subnet_ids: !terraform.state vpc private_subnet_ids
+  ```
+
+  ### Custom Scrape Configurations
+
+  You can add additional scrape targets beyond ECS service discovery:
+
+  ```yaml
+  vars:
+    scrape_configs:
+      - job_name: "custom-app"
+        targets:
+          - "app.internal:9090"
+        metrics_path: "/metrics"
+        scrape_interval: "15s"
+  ```
+
+  <!-- prettier-ignore-start -->
+  <!-- prettier-ignore-end -->
+
+references:
+  - name: AWS Distro for OpenTelemetry
+    url: https://aws-otel.github.io/
+    description: "AWS distribution of OpenTelemetry project"
+  - name: Amazon Managed Prometheus
+    url: https://docs.aws.amazon.com/prometheus/
+    description: "Managed Prometheus-compatible monitoring service"
+  - name: cloudposse-terraform-components
+    url: https://github.com/orgs/cloudposse-terraform-components/repositories
+    description: "Cloud Posse's upstream component library"
+tags:
+  - component/ecs
+  - layer/monitoring
+  - provider/aws
+# Categories of this project
+categories:
+  - component/ecs
+  - layer/monitoring
+  - provider/aws
+# License of this project
+license: "APACHE2"
+# Badges to display
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse-terraform-components/aws-ecs-adot-collector.svg?style=for-the-badge
+    url: https://github.com/cloudposse-terraform-components/aws-ecs-adot-collector/releases/latest
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://slack.cloudposse.com
+related:
+  - name: "aws-ecs"
+    description: "ECS Cluster component"
+    url: "https://github.com/cloudposse-terraform-components/aws-ecs"
+  - name: "aws-managed-prometheus-workspace"
+    description: "Amazon Managed Prometheus workspace component"
+    url: "https://github.com/cloudposse-terraform-components/aws-managed-prometheus-workspace"
+  - name: "Cloud Posse Terraform Modules"
+    description: Our collection of reusable Terraform modules used by our reference architectures.
+    url: "https://docs.cloudposse.com/modules/"
+  - name: "Atmos"
+    description: "Atmos is like docker-compose but for your infrastructure"
+    url: "https://atmos.tools"
+contributors: []

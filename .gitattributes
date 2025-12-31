@@ -1,0 +1,13 @@
+# Treat these files as text so line endings are normalized
+*.tf text
+*.tfvars text
+*.yaml text
+*.yml text
+*.md text
+*.sh text
+
+# Denote all files that are truly binary and should not be modified
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

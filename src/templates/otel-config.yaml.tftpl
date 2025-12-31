@@ -1,0 +1,61 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  sigv4auth:
+    region: ${region}
+    service: aps
+
+receivers:
+  prometheus:
+    config:
+      global:
+        scrape_interval: ${scrape_interval}
+      scrape_configs:
+%{ if ecs_service_discovery_enabled ~}
+        - job_name: ecs-services
+          file_sd_configs:
+            - files:
+                - /etc/ecs_sd_targets.json
+          relabel_configs:
+            - source_labels: [__meta_ecs_task_definition_family]
+              target_label: job
+            - source_labels: [__meta_ecs_container_name]
+              target_label: container_name
+            - source_labels: [__meta_ecs_cluster]
+              target_label: ecs_cluster
+%{ endif ~}
+%{ for config in scrape_configs ~}
+        - job_name: ${config.job_name}
+          scrape_interval: ${config.scrape_interval != "" ? config.scrape_interval : scrape_interval}
+          metrics_path: ${config.metrics_path}
+          static_configs:
+            - targets:
+%{ for target in config.targets ~}
+                - ${target}
+%{ endfor ~}
+%{ endfor ~}
+  awsecscontainermetrics: {}
+
+processors:
+  batch:
+    timeout: 30s
+
+exporters:
+  prometheusremotewrite:
+    endpoint: ${prometheus_endpoint}api/v1/remote_write
+    auth:
+      authenticator: sigv4auth
+
+service:
+  extensions:
+    - health_check
+    - sigv4auth
+  pipelines:
+    metrics:
+      receivers:
+        - prometheus
+        - awsecscontainermetrics
+      processors:
+        - batch
+      exporters:
+        - prometheusremotewrite
